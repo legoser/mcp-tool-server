@@ -1,0 +1,11 @@
+README.md
+.gitignore
+.dockerignore
+config.php
+.env
+.venv
+.venv.bak
+.idea
+.git
+__pycache__
+.claude/
