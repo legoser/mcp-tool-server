@@ -367,7 +367,7 @@
           "response": []
         },
         {
-          "name": "Web Search",
+          "name": "Web Search (Russian query)",
           "event": [
             {
               "listen": "test",
@@ -395,7 +395,52 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"jsonrpc\": \"2.0\", \"id\": 6, \"method\": \"tools/call\", \"params\": {\"name\": \"web_search\", \"arguments\": {\"query\": \"Python programming\", \"num_results\": 3}}}"
+              "raw": "{\"jsonrpc\": \"2.0\", \"id\": 6, \"method\": \"tools/call\", \"params\": {\"name\": \"web_search\", \"arguments\": {\"query\": \"погода в Юрге\", \"num_results\": 3}}}"
+            },
+            "url": {
+              "raw": "{{host}}/message?session_id={{session_id}}",
+              "host": ["{{host}}"],
+              "path": ["message"],
+              "query": [
+                {
+                  "key": "session_id",
+                  "value": "{{session_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Web Search (English query)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response queued successfully', function() {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.status).to.equal('ok');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"jsonrpc\": \"2.0\", \"id\": 15, \"method\": \"tools/call\", \"params\": {\"name\": \"web_search\", \"arguments\": {\"query\": \"Python programming\", \"num_results\": 3}}}"
             },
             "url": {
               "raw": "{{host}}/message?session_id={{session_id}}",
@@ -441,6 +486,141 @@
             "body": {
               "mode": "raw",
               "raw": "{\"jsonrpc\": \"2.0\", \"id\": 7, \"method\": \"tools/call\", \"params\": {\"name\": \"web_fetch\", \"arguments\": {\"url\": \"https://example.com\"}}}"
+            },
+            "url": {
+              "raw": "{{host}}/message?session_id={{session_id}}",
+              "host": ["{{host}}"],
+              "path": ["message"],
+              "query": [
+                {
+                  "key": "session_id",
+                  "value": "{{session_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Weather (today)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response queued successfully', function() {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.status).to.equal('ok');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"jsonrpc\": \"2.0\", \"id\": 11, \"method\": \"tools/call\", \"params\": {\"name\": \"get_weather\", \"arguments\": {\"city\": \"Юрга\"}}}"
+            },
+            "url": {
+              "raw": "{{host}}/message?session_id={{session_id}}",
+              "host": ["{{host}}"],
+              "path": ["message"],
+              "query": [
+                {
+                  "key": "session_id",
+                  "value": "{{session_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Weather (7 days)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response queued successfully', function() {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.status).to.equal('ok');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"jsonrpc\": \"2.0\", \"id\": 12, \"method\": \"tools/call\", \"params\": {\"name\": \"get_weather\", \"arguments\": {\"city\": \"Москва\", \"days\": 7}}}"
+            },
+            "url": {
+              "raw": "{{host}}/message?session_id={{session_id}}",
+              "host": ["{{host}}"],
+              "path": ["message"],
+              "query": [
+                {
+                  "key": "session_id",
+                  "value": "{{session_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Weather (with date)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response queued successfully', function() {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.status).to.equal('ok');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"jsonrpc\": \"2.0\", \"id\": 13, \"method\": \"tools/call\", \"params\": {\"name\": \"get_weather\", \"arguments\": {\"city\": \"Юрга\", \"forecast_date\": \"2026-03-15\"}}}"
             },
             "url": {
               "raw": "{{host}}/message?session_id={{session_id}}",

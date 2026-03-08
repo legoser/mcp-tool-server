@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup
 
 from ..core.logging import get_logger
 from ..utils.http_client import get_http_client
+from ..utils.search_providers import search_with_fallback
 
 logger = get_logger(__name__)
 
@@ -13,56 +14,7 @@ async def web_search(query: str, num_results: int = 5) -> str:
         query: Поисковый запрос
         num_results: Количество результатов (по умолчанию 5)
     """
-    client = await get_http_client()
-
-    search_url = "https://api.duckduckgo.com/"
-    params = {"q": query, "format": "json", "no_html": "1", "skip_disambig": "1"}
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-
-    resp = await client.get(search_url, params=params, headers=headers)
-
-    if resp.status_code not in (200, 202):
-        return f"Ошибка поиска: статус {resp.status_code}"
-
-    data = resp.json()
-
-    results = []
-
-    if data.get("AbstractText"):
-        results.append(
-            {
-                "title": data.get("Heading", "Result"),
-                "url": data.get("AbstractURL", ""),
-                "snippet": data["AbstractText"],
-            }
-        )
-
-    if "RelatedTopics" in data:
-        for item in data["RelatedTopics"]:
-            if len(results) >= num_results:
-                break
-            if "FirstURL" in item and "Text" in item:
-                text = item["Text"]
-                results.append(
-                    {
-                        "title": text.split(" - ")[0] if " - " in text else text[:50],
-                        "url": item["FirstURL"],
-                        "snippet": text,
-                    }
-                )
-            elif "Topics" in item:
-                for topic in item["Topics"]:
-                    if len(results) >= num_results:
-                        break
-                    if "FirstURL" in topic and "Text" in topic:
-                        text = topic["Text"]
-                        results.append(
-                            {
-                                "title": text.split(" - ")[0] if " - " in text else text[:50],
-                                "url": topic["FirstURL"],
-                                "snippet": text,
-                            }
-                        )
+    results = await search_with_fallback(query, num_results)
 
     if not results:
         return "Результаты не найдены"
