@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 async def test_get_current_time():
     from src.tools.time import get_current_time
 
-    result = await get_current_time()
+    result = get_current_time()
     assert "МСК" in result
     assert "." in result
 

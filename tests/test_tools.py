@@ -9,7 +9,7 @@ from src.tools.time import get_current_time
 class TestTimeTools:
     @pytest.mark.asyncio
     async def test_get_current_time(self):
-        result = await get_current_time()
+        result = get_current_time()
         assert "МСК" in result
         assert "." in result
 

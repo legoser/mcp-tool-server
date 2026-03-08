@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 
-from src.core.logging import get_logger
-from src.utils.http_client import get_http_client
+from ..core.logging import get_logger
+from ..utils.http_client import get_http_client
 
 logger = get_logger(__name__)
 

@@ -13,8 +13,8 @@ class Settings(BaseSettings):
 
     openai_base_url: str = "http://192.168.57.139:11434/v1"
     openai_api_key: str = "ollama"
-    llm_model_name: str = "llama3"
-    llm_available_models: list[str] = ["llama3", "llama3.1", "llama3.2", "qwen2.5", "mistral"]
+    llm_model_name: str = "qwen2.5-coder:7b"
+    llm_available_models: list[str] = ["llama3", "llama3.1", "llama3.2", "qwen3", "qwen2.5-coder:7b", "mistral"]
 
 
 settings = Settings()

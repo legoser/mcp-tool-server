@@ -1,111 +1,252 @@
-from collections.abc import AsyncGenerator
+"""FastAPI SSE server for MCP."""
+
+import json
+import sys
 from contextlib import asynccontextmanager
+from pathlib import Path
+from typing import AsyncGenerator
 
-import uvicorn
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
-from mcp.server import Server
-from mcp.server.sse import SseServerTransport
-from mcp.types import TextContent, Tool
+from fastapi import FastAPI, Request, Response
+from fastapi.responses import JSONResponse
+from sse_starlette.sse import EventSourceResponse
 
-from src.core.logging import get_logger, setup_logging
-from src.tools.registry import get_all_tools
+# Handle both: relative imports and direct execution
+try:
+    from .core.logging import get_logger, setup_logging
+    from .server import get_server
+except ImportError:
+    project_root = Path(__file__).parent.parent
+    sys.path.insert(0, str(project_root))
+    from src.core.logging import get_logger, setup_logging
+    from src.server import get_server
 
 logger = get_logger(__name__)
+setup_logging()
 
-
-def create_server() -> Server:
-    server = Server("mcp-tools-server")
-
-    @server.list_tools()
-    async def list_tools() -> list[Tool]:
-        logger.info("Listing tools")
-        tools = []
-        for tool_func in get_all_tools():
-            tools.append(
-                Tool(
-                    name=tool_func.__name__,
-                    description=tool_func.__doc__ or "",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {},
-                    },
-                )
-            )
-        return tools
-
-    @server.call_tool()
-    async def call_tool(name: str, arguments: dict | None = None) -> list[TextContent]:
-        logger.info(f"Calling tool: {name} with args: {arguments}")
-
-        for tool_func in get_all_tools():
-            if tool_func.__name__ == name:
-                result = await tool_func(**(arguments or {}))
-                return [TextContent(type="text", text=str(result))]
-
-        raise ValueError(f"Tool not found: {name}")
-
-    return server
+# Session management
+_sessions: dict[str, dict] = {}
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    setup_logging()
-    logger.info("Starting MCP Tools Server (SSE)")
+async def lifespan(app: FastAPI):
+    """Lifespan context for FastAPI app."""
+    logger.info("App startup")
     yield
-    logger.info("Shutting down MCP Tools Server")
+    logger.info("App shutdown")
 
 
-app = FastAPI(title="MCP Tools Server", lifespan=lifespan)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+app = FastAPI(
+    title="MCP Tools Server SSE",
+    description="MCP server with SSE transport",
+    lifespan=lifespan,
 )
-
-mcp_server = create_server()
-sse_transport = SseServerTransport("/messages/")
 
 
 @app.get("/sse")
-async def sse_handler(request: Request):
-    try:
-        async with sse_transport.connect_sse(
-            request.scope, request.receive, request._send
-        ) as streams:
-            await mcp_server.run(
-                streams[0],
-                streams[1],
-                mcp_server.create_initialization_options(),
-            )
-    except Exception:
-        pass
-    return Response(status_code=200, media_type="text/event-stream")
+async def sse_endpoint(request: Request) -> EventSourceResponse:
+    """SSE connection endpoint for MCP protocol."""
+    import uuid
 
-
-@app.post("/messages/")
-async def messages_handler(request: Request):
-    try:
-        await sse_transport.handle_post_message(request.scope, request.receive, request._send)
-    except Exception as e:
-        logger.error(f"Message handler error: {e}")
-        return Response(content="Internal server error", status_code=500)
-
-
-@app.get("/")
-async def root():
-    return {
-        "name": "MCP Tools Server",
-        "version": "0.1.0",
-        "endpoints": {
-            "sse": "/sse",
-            "messages": "/messages/",
-        },
+    session_id = str(uuid.uuid4())
+    _sessions[session_id] = {
+        "id": session_id,
+        "messages": [],
+        "closed": False,
     }
+    logger.info(f"SSE session created: {session_id}")
+
+    async def event_generator() -> AsyncGenerator[str, None]:
+        """Generate SSE events."""
+        try:
+            # Send initial session message with session_id
+            init_msg = {
+                "jsonrpc": "2.0",
+                "result": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {},
+                    "serverInfo": {
+                        "name": "MCP Tools Server",
+                        "version": "0.1.0",
+                    },
+                    "sessionId": session_id,
+                },
+            }
+            yield f"data: {json.dumps(init_msg, ensure_ascii=False)}\n\n"
+
+            # Keep connection alive
+            import asyncio
+            
+            while not _sessions[session_id]["closed"]:
+                # Check for messages to send
+                messages = _sessions[session_id]["messages"]
+                if messages:
+                    msg = messages.pop(0)
+                    yield f"data: {json.dumps(msg, ensure_ascii=False)}\n\n"
+                
+                await asyncio.sleep(0.1)
+
+        except Exception as e:
+            logger.error(f"SSE error: {e}")
+            yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
+        finally:
+            _sessions[session_id]["closed"] = True
+            logger.info(f"SSE session closed: {session_id}")
+
+    return EventSourceResponse(event_generator())
+
+
+@app.post("/message")
+async def message_endpoint(request: Request) -> JSONResponse:
+    """Handle MCP messages (JSONRPC)."""
+    session_id = request.query_params.get("session_id")
+    
+    if not session_id or session_id not in _sessions:
+        return JSONResponse(
+            {
+                "jsonrpc": "2.0",
+                "error": {
+                    "code": -32600,
+                    "message": "Invalid session",
+                },
+            },
+        )
+
+    try:
+        body = await request.json()
+        logger.debug(f"Received message: {body}")
+        
+        # Handle JSONRPC 2.0 protocol
+        if not isinstance(body, dict) or "jsonrpc" not in body:
+            return JSONResponse(
+                {
+                    "jsonrpc": "2.0",
+                    "error": {
+                        "code": -32600,
+                        "message": "Invalid Request",
+                    },
+                },
+            )
+
+        request_id = body.get("id")
+        method = body.get("method")
+        params = body.get("params", {})
+
+        # Log the method call
+        logger.info(f"[{session_id}] Method: {method}, Params: {params}")
+
+        # Get the server and handle the request
+        server = get_server()
+        
+        if method == "tools/list":
+            tools_list = await server.list_tools()
+            tools = []
+            for tool in tools_list:
+                tools.append({
+                    "name": tool.name,
+                    "description": tool.description or "",
+                    "inputSchema": tool.inputSchema or {},
+                })
+            
+            response = {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "result": {
+                    "tools": tools,
+                },
+            }
+        elif method == "tools/call":
+            # Handle tool calls
+            tool_name = params.get("name")
+            tool_args = params.get("arguments", {})
+            
+            # Find the tool and call it
+            response = await _call_tool(server, tool_name, tool_args, request_id)
+            
+        else:
+            response = {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "error": {
+                    "code": -32601,
+                    "message": f"Method not found: {method}",
+                },
+            }
+
+        # Queue message to be sent via SSE
+        if session_id in _sessions:
+            _sessions[session_id]["messages"].append(response)
+
+        return JSONResponse({"status": "ok", "queued": True})
+
+    except Exception as e:
+        logger.error(f"Message handling error: {e}", exc_info=True)
+        return JSONResponse(
+            {
+                "jsonrpc": "2.0",
+                "error": {
+                    "code": -32603,
+                    "message": f"Internal error: {str(e)}",
+                },
+            },
+        )
+
+
+async def _call_tool(server, tool_name: str, tool_args: dict, request_id: int) -> dict:
+    """Call a tool and return the response."""
+    try:
+        logger.debug(f"Calling tool {tool_name} with args: {tool_args}")
+        
+        # Use FastMCP's built-in call_tool method
+        result = await server.call_tool(tool_name, tool_args)
+        
+        # result is a list of ContentBlock objects, extract text
+        result_text = ""
+        if isinstance(result, list) and result:
+            # It's a list of ContentBlock
+            for block in result:
+                if hasattr(block, 'text'):
+                    result_text = block.text
+                    break
+        else:
+            result_text = str(result)
+        
+        return {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "result": {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": result_text,
+                    }
+                ]
+            },
+        }
+        
+    except Exception as e:
+        logger.error(f"Tool error: {e}", exc_info=True)
+        return {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "error": {
+                "code": -32603,
+                "message": f"Internal error: {str(e)}",
+            },
+        }
+
+
+@app.get("/health")
+async def health():
+    """Health check endpoint."""
+    return JSONResponse({"status": "ok"})
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=3344)
+    import uvicorn
+    
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=3344,
+        log_level="info",
+    )

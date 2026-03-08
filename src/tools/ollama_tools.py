@@ -1,6 +1,6 @@
-from src.core.config import settings
-from src.core.logging import get_logger
-from src.utils.http_client import get_http_client
+from ..core.config import settings
+from ..core.logging import get_logger
+from ..utils.http_client import get_http_client
 
 logger = get_logger(__name__)
 

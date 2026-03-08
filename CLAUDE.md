@@ -1,10 +1,10 @@
 # Project: MCP Tools Server (Python)
 
 ## Quick Commands
-- **Install**: `pip install -e .`
-- **Run (Stdio)**: `python -m src.main`
-- **Run (SSE)**: `uvicorn src.main_sse:app --port 3344`
-- **Inspector**: `npx @modelcontextprotocol/inspector python -m src.main`
+- **Install (Required first)**: `pip install -e .`
+- **Run (Stdio/MCP)**: `python -m src`
+- **Run (SSE/HTTP)**: `python -m uvicorn src.main_sse:app --port 3344`
+- **Inspector (FastMCP)**: `fastmcp dev inspector python -m src` ← Use this, NOT `src/main.py`
 - **Lint**: `ruff check .`
 - **Format**: `ruff format .`
 - **Test**: `pytest`

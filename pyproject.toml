@@ -11,6 +11,7 @@ dependencies = [
     "sse-starlette>=2.0.0",
     "uvicorn>=0.27.0",
     "beautifulsoup4>=4.12.0",
+    "fastmcp>=3.1.0",
 ]
 
 [project.optional-dependencies]
@@ -19,6 +20,12 @@ dev = [
     "pytest-asyncio>=0.23.0",
     "ruff>=0.3.0",
 ]
+
+[project.scripts]
+mcp-server = "src.main:server_main.run"
+
+[tool.setuptools]
+packages = ["src", "src.core", "src.tools", "src.utils"]
 
 [build-system]
 requires = ["setuptools>=61.0"]
