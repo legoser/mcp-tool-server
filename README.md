@@ -39,6 +39,7 @@ cp .env.example .env
 ### Требования зависимостей
 
 **Production** (`requirements.txt`):
+
 - `mcp` — MCP Protocol SDK
 - `httpx` — Асинхронный HTTP клиент
 - `pydantic-settings` — Конфигурация из .env
@@ -49,6 +50,7 @@ cp .env.example .env
 - `beautifulsoup4` — HTML парсинг
 
 **Development** (`requirements-dev.txt`):
+
 - `pytest`, `pytest-asyncio` — Тестирование
 - `ruff` — Линтинг и форматирование
 
@@ -178,12 +180,14 @@ Dockerfile использует **multi-stage build на Alpine**:
 2. **Runtime stage** (`python:3-alpine`): Копирует только необходимое в финальный образ
 
 **Alpine преимущества:**
+
 - Base image: ~50 MB (вместо ~300 MB slim образа)
 - Финальный размер: ~80-120 MB (вместо 300-400 MB с slim)
 - Экономия ≈ 70% от размера контейнера
 - Снижение времени загрузки и использования ресурсов
 
 **Результаты оптимизации:**
+
 - Исключены инструменты сборки после builder stage (build-base, python3-dev)
 - Удалены кэши pip и apk
 - Использован ultra-slim базовый образ Alpine

@@ -12,7 +12,11 @@ class Settings(BaseSettings):
     )
 
     client_token: str = ""
-    client_base_url: str = "http://localhost:3344"
+    client_base_url: str = "http://0.0.0.0:3344"
+
+    # Server configuration
+    server_host: str = "0.0.0.0"
+    server_port: int = 3344
 
     openai_base_url: str = "http://192.168.57.139:11434/v1"
     openai_api_key: str = "ollama"

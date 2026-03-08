@@ -4,7 +4,8 @@
 
 - **Install (Required first)**: `pip install -e .`
 - **Run (Stdio/MCP)**: `python -m src`
-- **Run (SSE/HTTP)**: `python -m uvicorn src.main_sse:app --port 3344`
+- **Run (SSE/HTTP)**: `python -m src.main_sse` or `python -m uvicorn src.main_sse:app --host 0.0.0.0 --port 3344`
+- **Run (SSE/HTTP, Custom Host/Port)**: `SERVER_HOST=0.0.0.0 SERVER_PORT=3344 python -m src.main_sse`
 - **Inspector (FastMCP)**: `fastmcp dev inspector python -m src` ← Use this, NOT `src/main.py`
 - **Lint**: `ruff check .`
 - **Format**: `ruff format .`
@@ -45,6 +46,20 @@
 | `chat_with_ai` | Чат с AI (Ollama) |
 | `list_ollama_models` | Список моделей Ollama |
 
+## Configuration
+
+Server configuration is controlled via environment variables (defined in `src/core/config.py`):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SERVER_HOST` | `0.0.0.0` | Server bind address (0.0.0.0 = accessible from external networks) |
+| `SERVER_PORT` | `3344` | Server port |
+| `CLIENT_BASE_URL` | `http://0.0.0.0:3344` | Base URL for client connections |
+
+Examples:
+- **Custom host/port**: `SERVER_HOST=127.0.0.1 SERVER_PORT=8080 python -m src.main_sse`
+- **Listen on all interfaces**: `SERVER_HOST=0.0.0.0 SERVER_PORT=3344 python -m src.main_sse` (default)
+
 ## Coding Standards
 
 - **Asyncio**: Все хендлеры ДОЛЖНЫ быть `async def`
@@ -64,4 +79,4 @@
 ## Deployment
 
 - **Stdio**: Claude Desktop, MCP Inspector
-- **SSE**: `uvicorn src.main_sse:app --port 3344`
+- **SSE**: `python -m src.main_sse` (uses SERVER_HOST and SERVER_PORT from env or defaults)

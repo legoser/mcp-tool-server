@@ -13,11 +13,13 @@ from sse_starlette.sse import EventSourceResponse
 # Handle both: relative imports and direct execution
 try:
     from .core.logging import get_logger, setup_logging
+    from .core.config import settings
     from .server import get_server
 except ImportError:
     project_root = Path(__file__).parent.parent
     sys.path.insert(0, str(project_root))
     from src.core.logging import get_logger, setup_logging
+    from src.core.config import settings
     from src.server import get_server
 
 logger = get_logger(__name__)
@@ -244,9 +246,10 @@ async def health():
 if __name__ == "__main__":
     import uvicorn
 
+    logger.info(f"Starting SSE server on {settings.server_host}:{settings.server_port}")
     uvicorn.run(
         app,
-        host="0.0.0.0",
-        port=3344,
+        host=settings.server_host,
+        port=settings.server_port,
         log_level="info",
     )
