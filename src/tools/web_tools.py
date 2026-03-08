@@ -1,14 +1,11 @@
-from bs4 import BeautifulSoup
-
-from ..core.logging import get_logger
-from ..utils.http_client import get_http_client
 from ..utils.search_providers import search_with_fallback
-
-logger = get_logger(__name__)
+from ..utils.web_fetcher import get_fetcher
 
 
 async def web_search(query: str, num_results: int = 5) -> str:
     """Выполняет поиск в интернете и возвращает список релевантных результатов.
+
+    Пробует провайдеры по очереди: DuckDuckGo API → DuckDuckGo HTML → Brave Search.
 
     Args:
         query: Поисковый запрос
@@ -36,31 +33,5 @@ async def web_fetch(url: str) -> str:
     Args:
         url: URL адрес страницы для загрузки
     """
-    client = await get_http_client(verify=True)
-
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-
-    try:
-        resp = await client.get(url, headers=headers, follow_redirects=True)
-    except Exception as e:
-        return f"Ошибка при загрузке: {str(e)}"
-
-    content_type = resp.headers.get("content-type", "")
-
-    if "text/html" in content_type:
-        soup = BeautifulSoup(resp.text, "html.parser")
-
-        for tag in soup(["script", "style", "nav", "footer", "header"]):
-            tag.decompose()
-
-        title = soup.title.string if soup.title else "Без заголовка"
-
-        text = soup.get_text(separator="\n", strip=True)
-
-        max_length = 8000
-        if len(text) > max_length:
-            text = text[:max_length] + "\n\n... (текст обрезан)"
-
-        return f"Заголовок: {title}\n\nURL: {url}\n\nСодержимое:\n{text}"
-
-    return f"URL: {url}\n\nТип контента: {content_type}\n\n{resp.text[:5000]}"
+    fetcher = await get_fetcher()
+    return await fetcher.fetch(url)

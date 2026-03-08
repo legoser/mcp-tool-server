@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 
 async def test_get_current_time():
-    from src.tools.time import get_current_time
+    from src.tools.time_tools import get_current_time
 
-    result = get_current_time()
+    result = await get_current_time()
     assert "МСК" in result
     assert "." in result
 
@@ -67,36 +67,31 @@ async def test_get_random_fact():
 async def test_web_search():
     from src.tools.web_tools import web_search
 
-    mock_json = {
-        "Heading": "Python",
-        "AbstractText": "Python is a programming language",
-        "AbstractURL": "https://python.org",
-        "RelatedTopics": [{"FirstURL": "https://example.com", "Text": "Example link"}],
-    }
+    mock_results = [
+        {
+            "title": "Python",
+            "url": "https://python.org",
+            "snippet": "Python is a programming language",
+        },
+        {"title": "Example", "url": "https://example.com", "snippet": "Example site"},
+    ]
 
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_response.json = MagicMock(return_value=mock_json)
-
-    mock_client = AsyncMock()
-    mock_client.get = AsyncMock(return_value=mock_response)
-
-    with patch("src.tools.web_tools.get_http_client", return_value=mock_client):
+    with patch("src.tools.web_tools.search_with_fallback", return_value=mock_results):
         result = await web_search("python", num_results=3)
-        assert "Python" in result or "python" in result.lower()
+        assert "Python" in result
+        assert "python.org" in result
 
 
 async def test_web_fetch():
     from src.tools.web_tools import web_fetch
+    from src.utils.web_fetcher import WebFetcher
 
-    mock_response = MagicMock()
-    mock_response.headers = {"content-type": "text/html"}
-    mock_response.text = "<html><title>Test</title><body>Content</body></html>"
+    mock_fetcher = AsyncMock(spec=WebFetcher)
+    mock_fetcher.fetch = AsyncMock(
+        return_value="Заголовок: Test\n\nURL: http://example.com\n\nСодержимое:\nTest content"
+    )
 
-    mock_client = AsyncMock()
-    mock_client.get = AsyncMock(return_value=mock_response)
-
-    with patch("src.tools.web_tools.get_http_client", return_value=mock_client):
+    with patch("src.tools.web_tools.get_fetcher", return_value=mock_fetcher):
         result = await web_fetch("http://example.com")
         assert "Test" in result
 

@@ -10,7 +10,7 @@
 | `get_random_joke` | Случайная шутка |
 | `get_random_quote` | Случайная цитата |
 | `get_random_fact` | Случайный факт |
-| `web_search` | Поиск в интернете (DuckDuckGo) |
+| `web_search` | Поиск в интернете (DuckDuckGo HTML) |
 | `web_fetch` | Загрузка веб-страниц |
 | `generate_text` | Генерация текста (Ollama) |
 | `chat_with_ai` | Чат с AI (Ollama) |
@@ -56,7 +56,20 @@ uvicorn src.main_sse:app --port 3344
 OPENAI_BASE_URL=http://192.168.57.139:11434/v1
 OPENAI_API_KEY=ollama
 LLM_MODEL_NAME=llama3
+
+# Brave Search API (опционально, для большего количества провайдеров)
+BRAVE_API_KEY=your_api_key
 ```
+
+## Поисковые провайдеры
+
+Модуль `src/utils/search_providers.py` содержит:
+
+- `DuckDuckGoProvider` — API DuckDuckGo (JSON)
+- `DuckDuckGoHTMLProvider` — HTML DuckDuckGo (с rate limiting)
+- `BraveSearchProvider` — Brave Search (требует API ключ)
+
+Функция `search_with_ddg()` использует DuckDuckGo HTML с rate limiting (30 зап/мин).
 
 ## Тестирование
 
@@ -123,17 +136,21 @@ mcp-tools-server/
 │   │   ├── config.py     # Настройки
 │   │   └── logging.py    # Логирование
 │   ├── tools/
-│   │   ├── time.py       # get_current_time
-│   │   ├── http_tools.py # joke, quote, fact
-│   │   ├── web_tools.py # web_search, web_fetch
-│   │   ├── ollama_tools.py # generate_text, chat, list
-│   │   └── registry.py
+│   │   ├── time_tools.py       # get_current_time
+│   │   ├── http_tools.py       # joke, quote, fact
+│   │   ├── web_tools.py        # web_search, web_fetch
+│   │   ├── ollama_tools.py     # generate_text, chat, list
+│   │   ├── weather_tools.py    # weather
+│   │   └── registry.py         # Регистрация инструментов
 │   └── utils/
-│       └── http_client.py
+│       ├── rate_limiter.py     # Rate limiting
+│       ├── search_providers.py # Провайдеры поиска (DuckDuckGo, Brave)
+│       ├── web_fetcher.py       # Загрузка/парсинг страниц
+│       └── http_client.py      # Общий HTTP клиент
 ├── tests/
-│   └── test_all_tools.py # Тесты всех инструментов
+│   ├── test_tools_unit.py      # Юнит-тесты (моки)
+│   └── test_all_tools.py       # Интеграционные тесты
 ├── pyproject.toml
-├── requirements.txt
 └── README.md
 ```
 

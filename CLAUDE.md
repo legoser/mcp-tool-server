@@ -22,7 +22,11 @@
 - `src/server.py` — MCP Server configuration
 - `src/tools/` — Инструменты с декоратором `@mcp.tool()`
 - `src/core/` — Конфигурация и логирование
-- `src/utils/` — Вспомогательные функции
+- `src/utils/` — Вспомогательные функции:
+  - `rate_limiter.py` — Rate limiting для HTTP запросов
+  - `search_providers.py` — Провайдеры поиска (DuckDuckGo, Brave)
+  - `web_fetcher.py` — Загрузка и парсинг веб-страниц
+  - `http_client.py` — Общий HTTP клиент
 
 ## Available Tools
 | Tool | Description |
@@ -31,7 +35,7 @@
 | `get_random_joke` | Случайная шутка |
 | `get_random_quote` | Случайная цитата |
 | `get_random_fact` | Случайный факт |
-| `web_search` | Поиск в интернете |
+| `web_search` | Поиск в интернете (DuckDuckGo HTML) |
 | `web_fetch` | Загрузка веб-страницы |
 | `generate_text` | Генерация текста (Ollama) |
 | `chat_with_ai` | Чат с AI (Ollama) |
@@ -48,6 +52,8 @@
 - Имена: `snake_case`
 - Ошибки: информативные исключения или текстовое описание
 - Зависимости: добавлять в `pyproject.toml`
+- **Общая логика** (HTTP, rate limiting, парсинг) — в `src/utils/`
+- **Инструменты** — только в `src/tools/`
 
 ## Deployment
 - **Stdio**: Claude Desktop, MCP Inspector
