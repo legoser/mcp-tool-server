@@ -74,11 +74,13 @@ BRAVE_API_KEY=your_api_key
 ## Тестирование
 
 ### Юнит-тесты (с моками)
+
 ```bash
 PYTHONPATH=. python tests/test_tools_unit.py
 ```
 
 ### Интеграционные тесты (stdio)
+
 ```bash
 PYTHONPATH=. python tests/test_all_tools.py
 ```
@@ -93,7 +95,8 @@ curl -N http://localhost:3344/sse
 ```
 
 В ответе будет поле `session_id`, например:
-```
+
+```json
 event: endpoint
 data: {"session_id": "abc-123-def", "server": ...}
 ```
@@ -126,7 +129,7 @@ curl -s -X POST "http://localhost:3344/messages/?session_id=$SESSION" \
 
 ## Структура проекта
 
-```
+```shell
 mcp-tools-server/
 ├── src/
 │   ├── main.py            # Stdio entry

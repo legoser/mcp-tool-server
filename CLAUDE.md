@@ -1,6 +1,7 @@
 # Project: MCP Tools Server (Python)
 
 ## Quick Commands
+
 - **Install (Required first)**: `pip install -e .`
 - **Run (Stdio/MCP)**: `python -m src`
 - **Run (SSE/HTTP)**: `python -m uvicorn src.main_sse:app --port 3344`
@@ -10,6 +11,7 @@
 - **Test**: `pytest`
 
 ## Tech Stack
+
 - **Framework**: `mcp` (Python SDK)
 - **Runtime**: Python 3.10+ (Asyncio)
 - **Validation**: Pydantic v2
@@ -17,6 +19,7 @@
 - **SSE Server**: FastAPI + uvicorn
 
 ## Project Structure
+
 - `src/main.py` — Stdio entry point
 - `src/main_sse.py` — SSE/HTTP entry point (port 3344)
 - `src/server.py` — MCP Server configuration
@@ -29,6 +32,7 @@
   - `http_client.py` — Общий HTTP клиент
 
 ## Available Tools
+
 | Tool | Description |
 |------|-------------|
 | `get_current_time` | Текущее время (МСК) |
@@ -42,12 +46,14 @@
 | `list_ollama_models` | Список моделей Ollama |
 
 ## Coding Standards
+
 - **Asyncio**: Все хендлеры ДОЛЖНЫ быть `async def`
 - **Type Hints**: Обязательные аннотации типов
 - **Docstrings**: Google-style — описание используется для инструментов
 - **Logging**: `src.core.logging` — логи в stderr
 
 ## Tool Development Rules
+
 - Каждый инструмент — функция с декоратором `@mcp.tool()`
 - Имена: `snake_case`
 - Ошибки: информативные исключения или текстовое описание
@@ -56,5 +62,6 @@
 - **Инструменты** — только в `src/tools/`
 
 ## Deployment
+
 - **Stdio**: Claude Desktop, MCP Inspector
 - **SSE**: `uvicorn src.main_sse:app --port 3344`
