@@ -62,11 +62,22 @@ cp .env.example .env
 python -m src.main
 ```
 
-### SSE режим (для удалённого доступа)
+### HTTP режим с /mcp endpoint (для LM Studio, Cursor, Claude)
 
 ```bash
-uvicorn src.main_sse:app --port 3344
+# Рекомендуемый способ (с поддержкой SSE для обратной совместимости)
+python -m uvicorn src.main_sse:app --port 3344
+
+# Или с пользовательским хостом/портом
+SERVER_HOST=0.0.0.0 SERVER_PORT=3344 python -m uvicorn src.main_sse:app
 ```
+
+**Endpoint**: `http://localhost:3344/mcp` (JSON-RPC 2.0)
+
+**Configure in LM Studio:**
+
+1. Create `mcp.json` in LM Studio config directory
+2. See [LM_STUDIO_SETUP.md](LM_STUDIO_SETUP.md) for complete setup guide
 
 ## Docker
 

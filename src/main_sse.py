@@ -12,14 +12,14 @@ from sse_starlette.sse import EventSourceResponse
 
 # Handle both: relative imports and direct execution
 try:
-    from .core.logging import get_logger, setup_logging
     from .core.config import settings
+    from .core.logging import get_logger, setup_logging
     from .server import get_server
 except ImportError:
     project_root = Path(__file__).parent.parent
     sys.path.insert(0, str(project_root))
-    from src.core.logging import get_logger, setup_logging
     from src.core.config import settings
+    from src.core.logging import get_logger, setup_logging
     from src.server import get_server
 
 logger = get_logger(__name__)
@@ -190,6 +190,145 @@ async def message_endpoint(request: Request) -> JSONResponse:
                     "message": f"Internal error: {str(e)}",
                 },
             },
+        )
+
+
+@app.post("/mcp")
+async def mcp_endpoint(request: Request) -> JSONResponse:
+    """
+    Standard MCP HTTP endpoint (JSON-RPC 2.0).
+    Compatible with LM Studio, Cursor, Claude Desktop, and other MCP clients.
+    This is the primary endpoint for standard MCP protocol.
+    """
+    try:
+        body = await request.json()
+        logger.debug(f"MCP request: {body}")
+
+        # Validate JSON-RPC 2.0 structure
+        if not isinstance(body, dict) or "jsonrpc" not in body:
+            return JSONResponse(
+                {
+                    "jsonrpc": "2.0",
+                    "error": {
+                        "code": -32600,
+                        "message": "Invalid Request",
+                    },
+                },
+                status_code=400,
+            )
+
+        request_id = body.get("id")
+        method = body.get("method")
+        params = body.get("params", {})
+
+        logger.info(f"MCP method: {method}, ID: {request_id}")
+
+        # Get the server instance
+        server = get_server()
+
+        # Handle MCP protocol methods
+        if method == "initialize":
+            # Client initialization
+            response = {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "result": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {
+                        "tools": {},
+                    },
+                    "serverInfo": {
+                        "name": "MCP Tools Server",
+                        "version": "0.1.0",
+                    },
+                },
+            }
+
+        elif method == "tools/list":
+            # List all available tools
+            tools_list = await server.list_tools()
+            tools = []
+            for tool in tools_list:
+                tools.append({
+                    "name": tool.name,
+                    "description": tool.description or "",
+                    "inputSchema": tool.inputSchema or {},
+                })
+
+            response = {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "result": {
+                    "tools": tools,
+                },
+            }
+
+        elif method == "tools/call":
+            # Call a specific tool
+            tool_name = params.get("name")
+            tool_args = params.get("arguments", {})
+
+            try:
+                logger.debug(f"Calling tool '{tool_name}' with args: {tool_args}")
+                result = await server.call_tool(tool_name, tool_args)
+
+                # Extract text from result
+                result_text = ""
+                if isinstance(result, list) and result:
+                    for block in result:
+                        if hasattr(block, 'text'):
+                            result_text = block.text
+                            break
+                else:
+                    result_text = str(result)
+
+                response = {
+                    "jsonrpc": "2.0",
+                    "id": request_id,
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": result_text,
+                            }
+                        ]
+                    },
+                }
+            except Exception as e:
+                logger.error(f"Tool call error: {e}", exc_info=True)
+                response = {
+                    "jsonrpc": "2.0",
+                    "id": request_id,
+                    "error": {
+                        "code": -32603,
+                        "message": f"Tool error: {str(e)}",
+                    },
+                }
+
+        else:
+            # Method not implemented
+            response = {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "error": {
+                    "code": -32601,
+                    "message": f"Method not found: {method}",
+                },
+            }
+
+        return JSONResponse(response)
+
+    except Exception as e:
+        logger.error(f"MCP endpoint error: {e}", exc_info=True)
+        return JSONResponse(
+            {
+                "jsonrpc": "2.0",
+                "error": {
+                    "code": -32603,
+                    "message": f"Internal server error: {str(e)}",
+                },
+            },
+            status_code=500,
         )
 
 

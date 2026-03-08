@@ -4,8 +4,9 @@
 
 - **Install (Required first)**: `pip install -e .`
 - **Run (Stdio/MCP)**: `python -m src`
-- **Run (SSE/HTTP)**: `python -m src.main_sse` or `python -m uvicorn src.main_sse:app --host 0.0.0.0 --port 3344`
-- **Run (SSE/HTTP, Custom Host/Port)**: `SERVER_HOST=0.0.0.0 SERVER_PORT=3344 python -m src.main_sse`
+- **Run (HTTP with /mcp endpoint)**: `python -m uvicorn src.main_sse:app --host 0.0.0.0 --port 3344`
+- **Run (HTTP with /mcp endpoint, Custom Host/Port)**: `SERVER_HOST=0.0.0.0 SERVER_PORT=3344 python -m uvicorn src.main_sse:app`
+- **Alternative HTTP Runner**: `python -m src.main_http` (direct fastmcp HTTP)
 - **Inspector (FastMCP)**: `fastmcp dev inspector python -m src` ← Use this, NOT `src/main.py`
 - **Lint**: `ruff check .`
 - **Format**: `ruff format .`
@@ -13,16 +14,17 @@
 
 ## Tech Stack
 
-- **Framework**: `mcp` (Python SDK)
+- **Framework**: `mcp` (Python SDK), `fastmcp` (HTTP extension)
 - **Runtime**: Python 3.10+ (Asyncio)
 - **Validation**: Pydantic v2
 - **HTTP**: `httpx` (async), `beautifulsoup4` (parsing)
-- **SSE Server**: FastAPI + uvicorn
+- **HTTP Server**: FastAPI + uvicorn
 
 ## Project Structure
 
 - `src/main.py` — Stdio entry point
-- `src/main_sse.py` — SSE/HTTP entry point (port 3344)
+- `src/main_sse.py` — HTTP entry point with **standard `/mcp` endpoint** (port 3344)
+- `src/main_http.py` — Direct FastMCP HTTP server (alternative)
 - `src/server.py` — MCP Server configuration
 - `src/tools/` — Инструменты с декоратором `@mcp.tool()`
 - `src/core/` — Конфигурация и логирование
@@ -46,6 +48,35 @@
 | `chat_with_ai` | Чат с AI (Ollama) |
 | `list_ollama_models` | Список моделей Ollama |
 
+## HTTP Endpoints
+
+| Endpoint | Method | Purpose | Protocol |
+|----------|--------|---------|----------|
+| **`/mcp`** | POST | **Standard MCP endpoint** | JSON-RPC 2.0 (compatible with LM Studio, Cursor, Claude) |
+| `/sse` | GET | SSE session creation (legacy) | Server-Sent Events |
+| `/message` | POST | Message handler with session (legacy) | JSON-RPC 2.0 |
+| `/health` | GET | Health check | JSON |
+
+### Using the /mcp Endpoint
+
+The `/mcp` endpoint implements the standard MCP protocol as per [modelcontextprotocol.io/spec](https://modelcontextprotocol.io/spec).
+
+**Example: List all tools**
+
+```bash
+curl -X POST http://localhost:3344/mcp -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+```
+
+**Example: Call a tool**
+
+```bash
+curl -X POST http://localhost:3344/mcp -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"get_current_time","arguments":{}}}'
+```
+
+**See [LM_STUDIO_SETUP.md](LM_STUDIO_SETUP.md) for complete integration guide.**
+
 ## Configuration
 
 Server configuration is controlled via environment variables (defined in `src/core/config.py`):
@@ -57,8 +88,9 @@ Server configuration is controlled via environment variables (defined in `src/co
 | `CLIENT_BASE_URL` | `http://0.0.0.0:3344` | Base URL for client connections |
 
 Examples:
-- **Custom host/port**: `SERVER_HOST=127.0.0.1 SERVER_PORT=8080 python -m src.main_sse`
-- **Listen on all interfaces**: `SERVER_HOST=0.0.0.0 SERVER_PORT=3344 python -m src.main_sse` (default)
+
+- **Custom host/port**: `SERVER_HOST=127.0.0.1 SERVER_PORT=8080 python -m uvicorn src.main_sse:app`
+- **Listen on all interfaces**: `SERVER_HOST=0.0.0.0 SERVER_PORT=3344 python -m uvicorn src.main_sse:app` (default)
 
 ## Coding Standards
 
@@ -78,5 +110,7 @@ Examples:
 
 ## Deployment
 
-- **Stdio**: Claude Desktop, MCP Inspector
-- **SSE**: `python -m src.main_sse` (uses SERVER_HOST and SERVER_PORT from env or defaults)
+- **Stdio**: Claude Desktop, MCP Inspector → `python -m src`
+- **HTTP (Standard MCP)**: LM Studio, Cursor, Claude, Cline → `python -m uvicorn src.main_sse:app --port 3344`
+  - Exposes `/mcp` endpoint with JSON-RPC 2.0 protocol
+  - See [LM_STUDIO_SETUP.md](LM_STUDIO_SETUP.md) for setup
