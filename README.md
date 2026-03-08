@@ -26,12 +26,31 @@ cd mcp-tools-server
 python -m venv .venv
 source .venv/bin/activate  # Linux/macOS
 
-# Установить зависимости
+# Установить зависимости продакшина
 pip install -r requirements.txt
+
+# (Опционально) Установить dev зависимости для тестирования/линтинга
+pip install -r requirements-dev.txt
 
 # Скопировать конфигурацию
 cp .env.example .env
 ```
+
+### Требования зависимостей
+
+**Production** (`requirements.txt`):
+- `mcp` — MCP Protocol SDK
+- `httpx` — Асинхронный HTTP клиент
+- `pydantic-settings` — Конфигурация из .env
+- `pydantic` — Валидация данных
+- `fastapi` — Web framework
+- `sse-starlette` — SSE transport
+- `uvicorn` — ASGI сервер
+- `beautifulsoup4` — HTML парсинг
+
+**Development** (`requirements-dev.txt`):
+- `pytest`, `pytest-asyncio` — Тестирование
+- `ruff` — Линтинг и форматирование
 
 ## Запуск
 
@@ -45,6 +64,157 @@ python -m src.main
 
 ```bash
 uvicorn src.main_sse:app --port 3344
+```
+
+## Docker
+
+### Сборка образа
+
+```bash
+# Собрать образ с multi-stage build на Alpine (оптимизирован по размеру)
+docker build -t mcp-tools-server:latest .
+
+# Собрать с определённым тегом версии
+docker build -t mcp-tools-server:0.1.0 .
+
+# Проверить размер образа
+docker images | grep mcp-tools-server
+```
+
+### Запуск контейнера
+
+#### Базовый запуск (SSE сервер)
+
+```bash
+docker run -p 3344:3344 \
+  --env-file .env \
+  --name mcp-server \
+  mcp-tools-server:latest
+```
+
+#### С локальным хостом (для доступа к Ollama)
+
+```bash
+docker run -p 3344:3344 \
+  --env-file .env \
+  --network host \
+  --name mcp-server \
+  mcp-tools-server:latest
+```
+
+#### С пробросом в локальную сеть (для домашней лаборатории)
+
+```bash
+docker run -p 192.168.1.100:3344:3344 \
+  --env-file .env \
+  --name mcp-server \
+  mcp-tools-server:latest
+```
+
+> Замените `192.168.1.100` на IP вашего хоста в локальной сети
+
+#### С Docker Compose
+
+Создайте файл `docker-compose.yml`:
+
+```yaml
+version: '3.9'
+
+services:
+  mcp-server:
+    build: .
+    container_name: mcp-tools-server
+    ports:
+      - "3344:3344"
+    environment:
+      OPENAI_BASE_URL: http://ollama:11434/v1
+      OPENAI_API_KEY: ollama
+      LLM_MODEL_NAME: llama3
+    env_file: .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3344/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    
+    # Опционально, если Ollama запущен в отдельном контейнере
+    # depends_on:
+    #   - ollama
+    
+    # networks:
+    #   - mcp-network
+
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: ollama
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #   environment:
+  #     OLLAMA_HOST: 0.0.0.0:11434
+  #   networks:
+  #     - mcp-network
+
+# volumes:
+#   ollama_data:
+
+# networks:
+#   mcp-network:
+#     driver: bridge
+```
+
+Запуск:
+
+```bash
+docker-compose up -d
+```
+
+### Docker образ оптимизация
+
+Dockerfile использует **multi-stage build на Alpine**:
+
+1. **Builder stage** (`python:3-alpine`): Компилирует зависимости в виртуальном окружении
+2. **Runtime stage** (`python:3-alpine`): Копирует только необходимое в финальный образ
+
+**Alpine преимущества:**
+- Base image: ~50 MB (вместо ~300 MB slim образа)
+- Финальный размер: ~80-120 MB (вместо 300-400 MB с slim)
+- Экономия ≈ 70% от размера контейнера
+- Снижение времени загрузки и использования ресурсов
+
+**Результаты оптимизации:**
+- Исключены инструменты сборки после builder stage (build-base, python3-dev)
+- Удалены кэши pip и apk
+- Использован ultra-slim базовый образ Alpine
+- Добавлен non-root user (uid 1000) для безопасности
+- Healthcheck встроен в образ
+
+### Переменные окружения для Docker
+
+Создайте `.env` файл перед запуском:
+
+```bash
+# Ollama (локальная LLM)
+OPENAI_BASE_URL=http://192.168.57.139:11434/v1
+OPENAI_API_KEY=ollama
+LLM_MODEL_NAME=llama3
+
+# Brave Search API (опционально)
+BRAVE_API_KEY=your_api_key
+```
+
+### Проверка здоровья контейнера
+
+```bash
+# Проверить статус healthcheck
+docker ps | grep mcp-server
+
+# Просмотреть логи
+docker logs -f mcp-server
+
+# Проверить вручную
+curl http://localhost:3344/health
 ```
 
 ## Конфигурация
@@ -73,16 +243,38 @@ BRAVE_API_KEY=your_api_key
 
 ## Тестирование
 
+Убедитесь что установлены dev зависимости:
+
+```bash
+pip install -r requirements-dev.txt
+```
+
 ### Юнит-тесты (с моками)
 
 ```bash
-PYTHONPATH=. python tests/test_tools_unit.py
+PYTHONPATH=. python -m pytest tests/test_tools_unit.py -v
 ```
 
 ### Интеграционные тесты (stdio)
 
 ```bash
-PYTHONPATH=. python tests/test_all_tools.py
+PYTHONPATH=. python -m pytest tests/test_all_tools.py -v
+```
+
+### Запуск всех тестов
+
+```bash
+pytest
+```
+
+### Линтинг и форматирование
+
+```bash
+# Проверить код с ruff
+ruff check .
+
+# Форматировать код
+ruff format .
 ```
 
 ## SSE API (примеры curl)
