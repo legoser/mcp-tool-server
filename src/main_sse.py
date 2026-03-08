@@ -269,18 +269,44 @@ async def mcp_endpoint(request: Request) -> JSONResponse:
             tool_args = params.get("arguments", {})
 
             try:
-                logger.debug(f"Calling tool '{tool_name}' with args: {tool_args}")
+                logger.info(f"Calling tool '{tool_name}' with args: {tool_args}")
                 result = await server.call_tool(tool_name, tool_args)
 
+                logger.info(f"Tool result type: {type(result)}, value: {result}")
+
                 # Extract text from result
+                # FastMCP returns either (content_blocks, metadata) or just content_blocks
                 result_text = ""
-                if isinstance(result, list) and result:
-                    for block in result:
+                content_blocks = result
+
+                # If result is a tuple, unpack it
+                if isinstance(result, tuple):
+                    if len(result) >= 1:
+                        content_blocks = result[0]
+                    logger.info(f"Unpacked tuple, content_blocks type: {type(content_blocks)}")
+
+                # Extract text from content blocks
+                if isinstance(content_blocks, list) and content_blocks:
+                    # It's a list of ContentBlock objects
+                    for block in content_blocks:
+                        logger.info(f"Block type: {type(block)}, has text: {hasattr(block, 'text')}")
                         if hasattr(block, 'text'):
                             result_text = block.text
+                            logger.info(f"Extracted text from block: {result_text[:100] if result_text else '(empty)'}")
                             break
+                        elif isinstance(block, dict) and 'text' in block:
+                            result_text = block['text']
+                            logger.info(f"Extracted text from dict block: {result_text[:100] if result_text else '(empty)'}")
+                            break
+
+                    if not result_text and len(content_blocks) > 0:
+                        # Fallback: convert first item to string
+                        logger.info("No text found in blocks, using str()")
+                        result_text = str(content_blocks[0])
                 else:
-                    result_text = str(result)
+                    result_text = str(content_blocks) if content_blocks is not None else ""
+
+                logger.info(f"Final result_text: {result_text[:100] if result_text else '(empty)'}")
 
                 response = {
                     "jsonrpc": "2.0",
@@ -291,11 +317,12 @@ async def mcp_endpoint(request: Request) -> JSONResponse:
                                 "type": "text",
                                 "text": result_text,
                             }
-                        ]
+                        ],
+                        "isError": False,
                     },
                 }
             except Exception as e:
-                logger.error(f"Tool call error: {e}", exc_info=True)
+                logger.error(f"Tool call error for '{tool_name}': {e}", exc_info=True)
                 response = {
                     "jsonrpc": "2.0",
                     "id": request_id,
@@ -316,8 +343,28 @@ async def mcp_endpoint(request: Request) -> JSONResponse:
                 },
             }
 
+        # Ensure response is JSON serializable
+        try:
+            response_json = json.dumps(response, ensure_ascii=False)
+            logger.info(f"MCP response JSON length: {len(response_json)} bytes")
+            logger.info(f"MCP response preview: {response_json[:300]}")
+        except Exception as e:
+            logger.error(f"Failed to serialize response: {e}")
+            response_json = "{}"
         return JSONResponse(response)
 
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON in request: {e}")
+        return JSONResponse(
+            {
+                "jsonrpc": "2.0",
+                "error": {
+                    "code": -32700,
+                    "message": f"Parse error: {str(e)}",
+                },
+            },
+            status_code=400,
+        )
     except Exception as e:
         logger.error(f"MCP endpoint error: {e}", exc_info=True)
         return JSONResponse(
@@ -335,21 +382,46 @@ async def mcp_endpoint(request: Request) -> JSONResponse:
 async def _call_tool(server, tool_name: str, tool_args: dict, request_id: int) -> dict:
     """Call a tool and return the response."""
     try:
-        logger.debug(f"Calling tool {tool_name} with args: {tool_args}")
+        logger.info(f"Calling tool '{tool_name}' with args: {tool_args}")
 
         # Use FastMCP's built-in call_tool method
         result = await server.call_tool(tool_name, tool_args)
 
+        logger.info(f"Tool result type: {type(result)}, value: {result}")
+
         # result is a list of ContentBlock objects, extract text
+        # FastMCP returns either (content_blocks, metadata) or just content_blocks
         result_text = ""
-        if isinstance(result, list) and result:
+        content_blocks = result
+
+        # If result is a tuple, unpack it
+        if isinstance(result, tuple):
+            if len(result) >= 1:
+                content_blocks = result[0]
+            logger.info(f"Unpacked tuple, content_blocks type: {type(content_blocks)}")
+
+        # Extract text from content blocks
+        if isinstance(content_blocks, list) and content_blocks:
             # It's a list of ContentBlock
-            for block in result:
+            for block in content_blocks:
+                logger.info(f"Block type: {type(block)}, has text: {hasattr(block, 'text')}")
                 if hasattr(block, 'text'):
                     result_text = block.text
+                    logger.info(f"Extracted text from block: {result_text[:100] if result_text else '(empty)'}")
                     break
+                elif isinstance(block, dict) and 'text' in block:
+                    result_text = block['text']
+                    logger.info(f"Extracted text from dict block: {result_text[:100] if result_text else '(empty)'}")
+                    break
+
+            if not result_text and len(content_blocks) > 0:
+                # Fallback: convert first item to string
+                logger.info("No text found in blocks, using str()")
+                result_text = str(content_blocks[0])
         else:
-            result_text = str(result)
+            result_text = str(content_blocks) if content_blocks is not None else ""
+
+        logger.info(f"Final result_text: {result_text[:100] if result_text else '(empty)'}")
 
         return {
             "jsonrpc": "2.0",
@@ -360,12 +432,13 @@ async def _call_tool(server, tool_name: str, tool_args: dict, request_id: int) -
                         "type": "text",
                         "text": result_text,
                     }
-                ]
+                ],
+                "isError": False,
             },
         }
 
     except Exception as e:
-        logger.error(f"Tool error: {e}", exc_info=True)
+        logger.error(f"Tool error for '{tool_name}': {e}", exc_info=True)
         return {
             "jsonrpc": "2.0",
             "id": request_id,
