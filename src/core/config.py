@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -6,6 +8,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="allow",
     )
 
     client_token: str = ""
@@ -24,6 +27,9 @@ class Settings(BaseSettings):
     ]
 
     brave_api_key: str = ""
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return getattr(self, key, default)
 
 
 settings = Settings()

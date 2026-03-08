@@ -7,7 +7,7 @@ from ..utils.http_client import get_http_client
 
 logger = get_logger(__name__)
 
-MAX_DAYS = 21
+MAX_DAYS = 21  # TODO move to settings
 
 
 class WeatherInput(BaseModel):

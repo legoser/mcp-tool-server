@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncGenerator
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from sse_starlette.sse import EventSourceResponse
 
@@ -75,14 +75,14 @@ async def sse_endpoint(request: Request) -> EventSourceResponse:
 
             # Keep connection alive
             import asyncio
-            
+
             while not _sessions[session_id]["closed"]:
                 # Check for messages to send
                 messages = _sessions[session_id]["messages"]
                 if messages:
                     msg = messages.pop(0)
                     yield f"data: {json.dumps(msg, ensure_ascii=False)}\n\n"
-                
+
                 await asyncio.sleep(0.1)
 
         except Exception as e:
@@ -99,7 +99,7 @@ async def sse_endpoint(request: Request) -> EventSourceResponse:
 async def message_endpoint(request: Request) -> JSONResponse:
     """Handle MCP messages (JSONRPC)."""
     session_id = request.query_params.get("session_id")
-    
+
     if not session_id or session_id not in _sessions:
         return JSONResponse(
             {
@@ -114,7 +114,7 @@ async def message_endpoint(request: Request) -> JSONResponse:
     try:
         body = await request.json()
         logger.debug(f"Received message: {body}")
-        
+
         # Handle JSONRPC 2.0 protocol
         if not isinstance(body, dict) or "jsonrpc" not in body:
             return JSONResponse(
@@ -136,7 +136,7 @@ async def message_endpoint(request: Request) -> JSONResponse:
 
         # Get the server and handle the request
         server = get_server()
-        
+
         if method == "tools/list":
             tools_list = await server.list_tools()
             tools = []
@@ -146,7 +146,7 @@ async def message_endpoint(request: Request) -> JSONResponse:
                     "description": tool.description or "",
                     "inputSchema": tool.inputSchema or {},
                 })
-            
+
             response = {
                 "jsonrpc": "2.0",
                 "id": request_id,
@@ -158,10 +158,10 @@ async def message_endpoint(request: Request) -> JSONResponse:
             # Handle tool calls
             tool_name = params.get("name")
             tool_args = params.get("arguments", {})
-            
+
             # Find the tool and call it
             response = await _call_tool(server, tool_name, tool_args, request_id)
-            
+
         else:
             response = {
                 "jsonrpc": "2.0",
@@ -195,10 +195,10 @@ async def _call_tool(server, tool_name: str, tool_args: dict, request_id: int) -
     """Call a tool and return the response."""
     try:
         logger.debug(f"Calling tool {tool_name} with args: {tool_args}")
-        
+
         # Use FastMCP's built-in call_tool method
         result = await server.call_tool(tool_name, tool_args)
-        
+
         # result is a list of ContentBlock objects, extract text
         result_text = ""
         if isinstance(result, list) and result:
@@ -209,7 +209,7 @@ async def _call_tool(server, tool_name: str, tool_args: dict, request_id: int) -
                     break
         else:
             result_text = str(result)
-        
+
         return {
             "jsonrpc": "2.0",
             "id": request_id,
@@ -222,7 +222,7 @@ async def _call_tool(server, tool_name: str, tool_args: dict, request_id: int) -
                 ]
             },
         }
-        
+
     except Exception as e:
         logger.error(f"Tool error: {e}", exc_info=True)
         return {
@@ -243,7 +243,7 @@ async def health():
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         app,
         host="0.0.0.0",
