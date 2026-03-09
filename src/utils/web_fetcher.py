@@ -3,6 +3,7 @@ import re
 import httpx
 from bs4 import BeautifulSoup
 
+from ..core.config import settings
 from ..core.logging import get_logger
 from .rate_limiter import RateLimiter
 
@@ -18,7 +19,7 @@ DEFAULT_HEADERS = {
 
 class WebFetcher:
     def __init__(self) -> None:
-        self.rate_limiter = RateLimiter(requests_per_minute=20)
+        self.rate_limiter = RateLimiter(requests_per_minute=settings.WEB_FETCH_RATE_LIMIT)
         self._client: httpx.AsyncClient | None = None
 
     async def _get_client(self) -> httpx.AsyncClient:
@@ -63,7 +64,7 @@ class WebFetcher:
             text = re.sub(r"\n{3,}", "\n\n", text)
             text = re.sub(r" {2,}", " ", text)
 
-            max_length = 8000
+            max_length = settings.WEB_FETCH_MAX_LENGTH
             if len(text) > max_length:
                 text = text[:max_length] + "\n\n... (текст обрезан)"
 

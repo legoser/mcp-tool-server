@@ -1,11 +1,12 @@
 import logging
-import os
 import sys
 
 import structlog
 
-LOG_FORMAT = os.getenv("LOG_FORMAT", "console")  # "console" or "json"
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+from .config import settings
+
+LOG_FORMAT = settings.LOG_FORMAT
+LOG_LEVEL = settings.LOG_LEVEL.upper()
 
 
 def setup_logging(level: str | None = None) -> None:
@@ -81,3 +82,5 @@ def get_logger(name: str) -> structlog.stdlib.BoundLogger:
         logger.info("tool_called", tool_name="web_search", query="test")
     """
     return structlog.get_logger(name)
+
+setup_logging()

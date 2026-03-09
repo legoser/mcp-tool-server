@@ -87,7 +87,9 @@ class DuckDuckGoHTMLProvider:
     BASE_URL = "https://html.duckduckgo.com/html"
 
     def __init__(self) -> None:
-        self.rate_limiter = RateLimiter(requests_per_minute=30)
+        from ..core.config import settings
+
+        self.rate_limiter = RateLimiter(requests_per_minute=settings.SEARCH_RATE_LIMIT)
         self._client: httpx.AsyncClient | None = None
 
     async def _get_client(self) -> httpx.AsyncClient:
@@ -230,9 +232,7 @@ async def search_with_fallback(query: str, num_results: int = 5) -> list[dict[st
     providers: list = [
         ddg_html,
         DuckDuckGoProvider(),
-        BraveSearchProvider(
-            api_key=settings.BRAVE_API_KEY if hasattr(settings, "BRAVE_API_KEY") else None
-        ),
+        BraveSearchProvider(api_key=settings.BRAVE_API_KEY or None),
     ]
 
     for provider in providers:

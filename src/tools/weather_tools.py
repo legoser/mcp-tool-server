@@ -2,18 +2,18 @@ from datetime import date, timedelta
 
 from pydantic import BaseModel, Field
 
+from ..core.config import settings
 from ..core.logging import get_logger
 from ..mcp import mcp
 from ..utils.http_client import get_http_client
 
 logger = get_logger(__name__)
 
-MAX_DAYS = 21  # TODO move to settings
-
 
 class WeatherInput(BaseModel):
     city: str = Field(description="Название населённого пункта")
-    days: int = Field(default=1, ge=1, le=MAX_DAYS, description="Количество дней прогноза (1-21)")
+    days: int = Field(default=1, ge=1, le=settings.WEATHER_RATE_LIMIT,
+                      description="Количество дней прогноза (1-21)")
     forecast_date: date | None = Field(
         default=None, description="Дата прогноза (не далее 21 дня от текущей). Формат: YYYY-MM-DD"
     )
@@ -73,8 +73,8 @@ async def get_weather(city: str, days: int = 1, forecast_date: str | None = None
 
         if target_date < today:
             return "Ошибка: дата не может быть в прошлом"
-        if (target_date - today).days > MAX_DAYS:
-            return f"Ошибка: дата не далее {MAX_DAYS} дней от текущей"
+        if (target_date - today).days > settings.WEATHER_DAYS_LIMIT:
+            return f"Ошибка: дата не далее {settings.WEATHER_DAYS_LIMIT} дней от текущей"
 
     if target_date:
         days_ahead = (target_date - today).days + 1
@@ -84,7 +84,7 @@ async def get_weather(city: str, days: int = 1, forecast_date: str | None = None
 
     try:
         geo_resp = await client.get(
-            "https://geocoding-api.open-meteo.com/v1/search",
+            settings.WEATHER_API_GEOCODING_URL,
             params={"name": city, "count": 1, "language": "ru", "format": "json"},
         )
 
@@ -117,7 +117,7 @@ async def get_weather(city: str, days: int = 1, forecast_date: str | None = None
             del weather_params["forecast_days"]
 
         weather_resp = await client.get(
-            "https://api.open-meteo.com/v1/forecast",
+            settings.WEATHER_API_FORECAST_URL,
             params=weather_params,
         )
 
