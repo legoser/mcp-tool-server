@@ -1,10 +1,11 @@
-
 from ..core.logging import get_logger
+from ..mcp import mcp
 from ..utils.http_client import get_http_client
 
 logger = get_logger(__name__)
 
 
+@mcp.tool()
 async def get_random_joke() -> str:
     """Возвращает случайный анекдот/шутку на английском языке."""
     client = await get_http_client()
@@ -14,6 +15,7 @@ async def get_random_joke() -> str:
     return f"{data['setup']}\n— {data['punchline']}"
 
 
+@mcp.tool()
 async def get_random_quote() -> str:
     """Возвращает случайную вдохновляющую цитату."""
     client = await get_http_client()
@@ -23,6 +25,7 @@ async def get_random_quote() -> str:
     return f"«{data['q']}»\n— {data['a']}"
 
 
+@mcp.tool()
 async def get_random_fact() -> str:
     """Возвращает случайный интересный факт на английском языке."""
     client = await get_http_client()

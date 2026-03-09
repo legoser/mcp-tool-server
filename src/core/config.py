@@ -11,17 +11,16 @@ class Settings(BaseSettings):
         extra="allow",
     )
 
-    client_token: str = ""
-    client_base_url: str = "http://0.0.0.0:3344"
+    BASE_URL: str = "http://0.0.0.0:3344"
 
     # Server configuration
-    server_host: str = "0.0.0.0"
-    server_port: int = 3344
+    HOST: str = "0.0.0.0"
+    PORT: int = 3344
 
-    openai_base_url: str = "http://192.168.57.139:11434/v1"
-    openai_api_key: str = "ollama"
-    llm_model_name: str = "qwen2.5-coder:7b"
-    llm_available_models: list[str] = [
+    OPENAI_BASE_URL: str = "http://192.168.57.139:11434/v1"
+    OPENAI_API_KEY: str = "ollama"
+    LLM_MODEL_NAME: str = "qwen2.5-coder:7b"
+    LLM_AVAILABLE_MODELS: list[str] = [
         "llama3",
         "llama3.1",
         "llama3.2",
@@ -30,7 +29,7 @@ class Settings(BaseSettings):
         "mistral",
     ]
 
-    brave_api_key: str = ""
+    BRAVE_API_KEY: str = ""
 
     def get(self, key: str, default: Any = None) -> Any:
         return getattr(self, key, default)

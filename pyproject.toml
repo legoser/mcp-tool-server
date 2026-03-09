@@ -4,14 +4,13 @@ version = "0.1.0"
 description = "MCP Server with various tools for LLM"
 requires-python = ">=3.10"
 dependencies = [
-    "mcp>=1.0",
     "httpx>=0.27.0",
     "pydantic-settings>=2.0.0",
     "fastapi>=0.110.0",
-    "sse-starlette>=2.0.0",
     "uvicorn>=0.27.0",
     "beautifulsoup4>=4.12.0",
     "fastmcp>=3.1.0",
+    "structlog>=24.0.0",
 ]
 
 [project.optional-dependencies]
@@ -22,10 +21,10 @@ dev = [
 ]
 
 [project.scripts]
-mcp-server = "src.main:server_main.run"
+mcp-server = "src.main:main"
 
 [tool.setuptools]
-packages = ["src", "src.core", "src.tools", "src.utils"]
+packages = ["src", "src.core", "src.tools", "src.utils", "src.prompts"]
 
 [build-system]
 requires = ["setuptools>=61.0"]
@@ -34,6 +33,7 @@ build-backend = "setuptools.build_meta"
 [tool.ruff]
 target-version = "py310"
 line-length = 100
+exclude = ["src/prompts/*.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]

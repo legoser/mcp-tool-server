@@ -3,36 +3,61 @@
 ## Quick Commands
 
 - **Install (Required first)**: `pip install -e .`
-- **Run (Stdio/MCP)**: `python -m src`
-- **Run (HTTP with /mcp endpoint)**: `python -m uvicorn src.main_sse:app --host 0.0.0.0 --port 3344`
-- **Run (HTTP with /mcp endpoint, Custom Host/Port)**: `SERVER_HOST=0.0.0.0 SERVER_PORT=3344 python -m uvicorn src.main_sse:app`
-- **Alternative HTTP Runner**: `python -m src.main_http` (direct fastmcp HTTP)
-- **Inspector (FastMCP)**: `fastmcp dev inspector python -m src` ← Use this, NOT `src/main.py`
-- **Lint**: `ruff check .`
-- **Format**: `ruff format .`
+- **Run (Stdio)**: `python -m src`
+- **Run (HTTP)**: `TRANSPORT=http python -m src`
+- **Run (HTTP, custom port)**: `TRANSPORT=http SERVER_PORT=8080 python -m src`
+- **Inspector**: `fastmcp dev inspector python -m src`
+- **Lint**: `ruff check src/`
+- **Format**: `ruff format src/`
 - **Test**: `pytest`
 
 ## Tech Stack
 
-- **Framework**: `mcp` (Python SDK), `fastmcp` (HTTP extension)
+- **Framework**: `fastmcp` (Streamable HTTP transport)
 - **Runtime**: Python 3.10+ (Asyncio)
 - **Validation**: Pydantic v2
 - **HTTP**: `httpx` (async), `beautifulsoup4` (parsing)
-- **HTTP Server**: FastAPI + uvicorn
+- **Logging**: `structlog` (structured logging)
 
 ## Project Structure
 
-- `src/main.py` — Stdio entry point
-- `src/main_sse.py` — HTTP entry point with **standard `/mcp` endpoint** (port 3344)
-- `src/main_http.py` — Direct FastMCP HTTP server (alternative)
-- `src/server.py` — MCP Server configuration
-- `src/tools/` — Инструменты с декоратором `@mcp.tool()`
-- `src/core/` — Конфигурация и логирование
-- `src/utils/` — Вспомогательные функции:
-  - `rate_limiter.py` — Rate limiting для HTTP запросов
-  - `search_providers.py` — Провайдеры поиска (DuckDuckGo, Brave)
-  - `web_fetcher.py` — Загрузка и парсинг веб-страниц
-  - `http_client.py` — Общий HTTP клиент
+```
+src/
+├── __init__.py         # Package init
+├── __main__.py        # Entry point for python -m src
+├── main.py            # Main server logic
+├── mcp.py             # FastMCP server definition
+├── server.py         # Server exports and config
+├── core/
+│   ├── config.py      # Configuration settings
+│   └── logging.py    # Structured logging (structlog)
+├── prompts/          # @mcp.prompt() decorators
+│   ├── __init__.py
+│   ├── code_review.py
+│   ├── debugging.py
+│   ├── code_generator.py
+│   ├── test_generator.py
+│   ├── refactoring.py
+│   ├── code_explainer.py
+│   ├── documentation.py
+│   ├── security_audit.py
+│   ├── performance.py
+│   ├── sql_query.py
+│   ├── api_design.py
+│   └── architecture.py
+├── tools/            # @mcp.tool() decorators
+│   ├── __init__.py
+│   ├── time_tools.py
+│   ├── http_tools.py
+│   ├── web_tools.py
+│   ├── weather_tools.py
+│   └── ollama_tools.py
+└── utils/            # Helper functions
+    ├── http_client.py
+    ├── rate_limiter.py
+    ├── search_providers.py
+    └── web_fetcher.py
+```
 
 ## Available Tools
 
@@ -42,75 +67,86 @@
 | `get_random_joke` | Случайная шутка |
 | `get_random_quote` | Случайная цитата |
 | `get_random_fact` | Случайный факт |
-| `web_search` | Поиск в интернете (DuckDuckGo HTML) |
+| `web_search` | Поиск в интернете |
 | `web_fetch` | Загрузка веб-страницы |
+| `get_weather` | Прогноз погоды |
 | `generate_text` | Генерация текста (Ollama) |
 | `chat_with_ai` | Чат с AI (Ollama) |
 | `list_ollama_models` | Список моделей Ollama |
 
-## HTTP Endpoints
+## Available Prompts
 
-| Endpoint | Method | Purpose | Protocol |
-|----------|--------|---------|----------|
-| **`/mcp`** | POST | **Standard MCP endpoint** | JSON-RPC 2.0 (compatible with LM Studio, Cursor, Claude) |
-| `/sse` | GET | SSE session creation (legacy) | Server-Sent Events |
-| `/message` | POST | Message handler with session (legacy) | JSON-RPC 2.0 |
-| `/health` | GET | Health check | JSON |
+| Prompt | Description |
+|--------|-------------|
+| `review_code` | Code Review Agent |
+| `debug_error` | Debug Assistant Agent |
+| `generate_code` | Code Generator Agent |
+| `generate_tests` | Test Generator Agent |
+| `refactor_code` | Refactoring Agent |
+| `explain_code` | Code Explainer Agent |
+| `generate_docs` | Documentation Agent |
+| `security_audit` | Security Audit Agent |
+| `optimize_performance` | Performance Optimizer Agent |
+| `generate_sql` | SQL Query Agent |
+| `design_api` | API Design Agent |
+| `architecture_advice` | Architecture Advisor Agent |
 
-### Using the /mcp Endpoint
+## MCP Endpoint
 
-The `/mcp` endpoint implements the standard MCP protocol as per [modelcontextprotocol.io/spec](https://modelcontextprotocol.io/spec).
+The server exposes the standard MCP protocol at `/mcp`.
 
 **Example: List all tools**
 
 ```bash
-curl -X POST http://localhost:3344/mcp -H "Content-Type: application/json" \
+curl -X POST http://localhost:3344/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 ```
 
 **Example: Call a tool**
 
 ```bash
-curl -X POST http://localhost:3344/mcp -H "Content-Type: application/json" \
+curl -X POST http://localhost:3344/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
   -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"get_current_time","arguments":{}}}'
 ```
 
-**See [LM_STUDIO_SETUP.md](LM_STUDIO_SETUP.md) for complete integration guide.**
-
-## Configuration
-
-Server configuration is controlled via environment variables (defined in `src/core/config.py`):
+## Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SERVER_HOST` | `0.0.0.0` | Server bind address (0.0.0.0 = accessible from external networks) |
+| `SERVER_HOST` | `0.0.0.0` | Server bind address |
 | `SERVER_PORT` | `3344` | Server port |
-| `CLIENT_BASE_URL` | `http://0.0.0.0:3344` | Base URL for client connections |
+| `TRANSPORT` | `stdio` | Transport: `stdio` or `http` |
+| `FASTMCP_STATELESS_HTTP` | `true` | Stateless mode for HTTP |
+| `LOG_LEVEL` | `INFO` | Log level (DEBUG, INFO, WARNING, ERROR) |
+| `LOG_FORMAT` | `console` | Log format: `console` or `json` |
 
-Examples:
+## Logging
 
-- **Custom host/port**: `SERVER_HOST=127.0.0.1 SERVER_PORT=8080 python -m uvicorn src.main_sse:app`
-- **Listen on all interfaces**: `SERVER_HOST=0.0.0.0 SERVER_PORT=3344 python -m uvicorn src.main_sse:app` (default)
+The server uses `structlog` for structured logging:
+
+- **Console format** (default): Human-readable with colors
+- **JSON format**: Set `LOG_FORMAT=json` for machine-readable output
+
+Example:
+```bash
+LOG_FORMAT=json LOG_LEVEL=DEBUG TRANSPORT=http python -m src
+```
 
 ## Coding Standards
 
-- **Asyncio**: Все хендлеры ДОЛЖНЫ быть `async def`
-- **Type Hints**: Обязательные аннотации типов
-- **Docstrings**: Google-style — описание используется для инструментов
-- **Logging**: `src.core.logging` — логи в stderr
+- **Asyncio**: All handlers must be `async def`
+- **Type Hints**: Required annotations
+- **Docstrings**: Google-style — description is used for tools/prompts
+- **Logging**: Use `src.core.logging` for structured logging
 
-## Tool Development Rules
+## Tool/Prompt Development
 
-- Каждый инструмент — функция с декоратором `@mcp.tool()`
-- Имена: `snake_case`
-- Ошибки: информативные исключения или текстовое описание
-- Зависимости: добавлять в `pyproject.toml`
-- **Общая логика** (HTTP, rate limiting, парсинг) — в `src/utils/`
-- **Инструменты** — только в `src/tools/`
-
-## Deployment
-
-- **Stdio**: Claude Desktop, MCP Inspector → `python -m src`
-- **HTTP (Standard MCP)**: LM Studio, Cursor, Claude, Cline → `python -m uvicorn src.main_sse:app --port 3344`
-  - Exposes `/mcp` endpoint with JSON-RPC 2.0 protocol
-  - See [LM_STUDIO_SETUP.md](LM_STUDIO_SETUP.md) for setup
+- Tools: Functions with `@mcp.tool()` decorator in `src/tools/`
+- Prompts: Functions with `@mcp.prompt()` decorator in `src/prompts/`
+- Names: `snake_case`
+- Errors: Informative exceptions or text description
+- Dependencies: Add to `pyproject.toml`

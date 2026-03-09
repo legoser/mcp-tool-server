@@ -1,22 +1,24 @@
 from ..core.config import settings
 from ..core.logging import get_logger
+from ..mcp import mcp
 from ..utils.http_client import get_http_client
 
 logger = get_logger(__name__)
 
 
+@mcp.tool()
 async def generate_text(prompt: str) -> str:
     """Генерирует текст с использованием локальной модели Ollama."""
     client = await get_http_client()
 
     payload = {
-        "model": settings.llm_model_name,
+        "model": settings.LLM_MODEL_NAME,
         "prompt": prompt,
         "stream": False,
     }
 
     resp = await client.post(
-        f"{settings.openai_base_url}/completions",
+        f"{settings.OPENAI_BASE_URL}/completions",
         json=payload,
     )
     resp.raise_for_status()
@@ -24,12 +26,13 @@ async def generate_text(prompt: str) -> str:
     return data["choices"][0]["text"].strip()
 
 
+@mcp.tool()
 async def chat_with_ai(system_prompt: str, user_message: str) -> str:
     """Отправляет сообщение в чат с локальной моделью Ollama."""
     client = await get_http_client()
 
     payload = {
-        "model": settings.llm_model_name,
+        "model": settings.LLM_MODEL_NAME,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message},
@@ -38,7 +41,7 @@ async def chat_with_ai(system_prompt: str, user_message: str) -> str:
     }
 
     resp = await client.post(
-        f"{settings.openai_base_url}/chat/completions",
+        f"{settings.OPENAI_BASE_URL}/chat/completions",
         json=payload,
     )
     resp.raise_for_status()
@@ -46,6 +49,7 @@ async def chat_with_ai(system_prompt: str, user_message: str) -> str:
     return data["choices"][0]["message"]["content"].strip()
 
 
+@mcp.tool()
 async def list_ollama_models() -> str:
     """Возвращает список доступных моделей в Ollama.
 
@@ -53,7 +57,7 @@ async def list_ollama_models() -> str:
     """
     client = await get_http_client()
 
-    resp = await client.get(f"{settings.openai_base_url.replace('/v1', '')}/api/tags")
+    resp = await client.get(f"{settings.OPENAI_BASE_URL.replace('/v1', '')}/api/tags")
     resp.raise_for_status()
     data = resp.json()
 

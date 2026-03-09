@@ -3,6 +3,7 @@ from datetime import date, timedelta
 from pydantic import BaseModel, Field
 
 from ..core.logging import get_logger
+from ..mcp import mcp
 from ..utils.http_client import get_http_client
 
 logger = get_logger(__name__)
@@ -52,6 +53,7 @@ def get_weather_description(code: int) -> str:
     return descriptions.get(code, f"Код {code}")
 
 
+@mcp.tool()
 async def get_weather(city: str, days: int = 1, forecast_date: str | None = None) -> str:
     """Получает прогноз погоды для указанного населённого пункта.
 

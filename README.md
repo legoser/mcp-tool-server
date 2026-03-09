@@ -59,17 +59,16 @@ cp .env.example .env
 ### Stdio режим (для Claude Desktop, MCP Inspector)
 
 ```bash
-python -m src.main
+# Stdio
+python -m src
 ```
 
 ### HTTP режим с /mcp endpoint (для LM Studio, Cursor, Claude)
 
 ```bash
-# Рекомендуемый способ (с поддержкой SSE для обратной совместимости)
-python -m uvicorn src.main_sse:app --port 3344
-
-# Или с пользовательским хостом/портом
-SERVER_HOST=0.0.0.0 SERVER_PORT=3344 python -m uvicorn src.main_sse:app
+Запуск
+# HTTP (основной)
+TRANSPORT=http python -m src
 ```
 
 **Endpoint**: `http://localhost:3344/mcp` (JSON-RPC 2.0)

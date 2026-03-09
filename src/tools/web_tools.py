@@ -1,7 +1,9 @@
+from ..mcp import mcp
 from ..utils.search_providers import search_with_fallback
 from ..utils.web_fetcher import get_fetcher
 
 
+@mcp.tool()
 async def web_search(query: str, num_results: int = 5) -> str:
     """Выполняет поиск в интернете и возвращает список релевантных результатов.
 
@@ -27,6 +29,7 @@ async def web_search(query: str, num_results: int = 5) -> str:
     return output
 
 
+@mcp.tool()
 async def web_fetch(url: str) -> str:
     """Загружает и возвращает содержимое веб-страницы.
 

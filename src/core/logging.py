@@ -2,27 +2,82 @@ import logging
 import os
 import sys
 
-LOG_FORMAT = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
-LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+import structlog
+
+LOG_FORMAT = os.getenv("LOG_FORMAT", "console")  # "console" or "json"
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 
 
-def setup_logging(level: int | None = None) -> None:
-    """Configure root logging.
+def setup_logging(level: str | None = None) -> None:
+    """Configure structured logging.
 
-    `level` can be provided as an int or will be read from environment variable
-    `LOG_LEVEL` (e.g. "DEBUG", "INFO"). Defaults to INFO.
+    Args:
+        level: Log level (DEBUG, INFO, WARNING, ERROR). Defaults to LOG_LEVEL env var or INFO.
     """
     if level is None:
-        env = os.getenv("LOG_LEVEL", "INFO").upper()
-        level = getattr(logging, env, logging.INFO)
+        level = LOG_LEVEL
 
-    logging.basicConfig(
-        level=level,
-        format=LOG_FORMAT,
-        datefmt=LOG_DATE_FORMAT,
-        stream=sys.stderr,
+    log_level = getattr(logging, level, logging.INFO)
+    log_format = LOG_FORMAT
+
+    if log_format == "json":
+        processors = [
+            structlog.stdlib.add_log_level,
+            structlog.stdlib.add_logger_name,
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.processors.StackInfoRenderer(),
+            structlog.processors.format_exc_info,
+            structlog.processors.JSONRenderer(),
+        ]
+    else:
+        processors = [
+            structlog.stdlib.add_log_level,
+            structlog.stdlib.add_logger_name,
+            structlog.processors.TimeStamper(fmt="%H:%M:%S"),
+            structlog.processors.StackInfoRenderer(),
+            structlog.processors.format_exc_info,
+            structlog.dev.ConsoleRenderer(),
+        ]
+
+    structlog.configure(
+        processors=processors,
+        context_class=dict,
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        wrapper_class=structlog.stdlib.BoundLogger,
+        cache_logger_on_first_use=True,
     )
 
+    root_logger = logging.getLogger()
+    root_logger.setLevel(log_level)
 
-def get_logger(name: str) -> logging.Logger:
-    return logging.getLogger(name)
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setLevel(log_level)
+
+    if log_format == "json":
+        formatter = structlog.stdlib.ProcessorFormatter(
+            processor=structlog.processors.JSONRenderer(),
+        )
+    else:
+        formatter = logging.Formatter(
+            "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+            datefmt="%H:%M:%S",
+        )
+
+    handler.setFormatter(formatter)
+    root_logger.addHandler(handler)
+
+
+def get_logger(name: str) -> structlog.stdlib.BoundLogger:
+    """Get a structured logger instance.
+
+    Args:
+        name: Logger name (typically __name__)
+
+    Returns:
+        A structlog bound logger
+
+    Example:
+        logger = get_logger(__name__)
+        logger.info("tool_called", tool_name="web_search", query="test")
+    """
+    return structlog.get_logger(name)

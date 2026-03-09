@@ -1,35 +1,43 @@
 """Main entry point for MCP server."""
 
-import sys
-from pathlib import Path
+import asyncio
+import os
 
-# Handle both: relative imports (when loaded as module) and direct execution
-try:
-    from .core.logging import get_logger, setup_logging
-    from .server import create_server
-except ImportError:
-    project_root = Path(__file__).parent.parent
-    sys.path.insert(0, str(project_root))
-    from src.core.logging import get_logger, setup_logging
-    from src.server import create_server
+from . import (
+    prompts,  # noqa: F401 - needed to register prompts
+    tools,  # noqa: F401 - needed to register tools
+)
+from .core.logging import get_logger, setup_logging
+from .mcp import mcp
 
-logger = get_logger(__name__)
 setup_logging()
+logger = get_logger(__name__)
+
+HOST = os.getenv("SERVER_HOST", "0.0.0.0")
+PORT = int(os.getenv("SERVER_PORT", "3344"))
+TRANSPORT = os.getenv("TRANSPORT", "http")
+STATELESS = os.getenv("FASTMCP_STATELESS_HTTP", "true").lower() == "true"
 
 
-class ServerWrapper:
-    """Wrapper to provide server_main compatibility."""
+async def run_http():
+    """Run the MCP server with HTTP transport."""
+    await mcp.run_async(
+        transport="streamable-http",
+        host=HOST,
+        port=PORT,
+        stateless_http=STATELESS,
+    )
 
-    def run(self, transport: str = "stdio"):
-        """Run the server with specified transport."""
-        logger.info(f"Starting MCP server with transport: {transport}")
-        server = create_server()
-        server.run(transport=transport)
 
-
-# Export server_main for compatibility with pyproject.toml and other imports
-server_main = ServerWrapper()
+def main() -> None:
+    """Run the MCP server."""
+    if TRANSPORT == "http":
+        logger.info(f"Starting HTTP server on {HOST}:{PORT}, stateless={STATELESS}")
+        asyncio.run(run_http())
+    else:
+        logger.info("Starting stdio server")
+        mcp.run(transport="stdio")
 
 
 if __name__ == "__main__":
-    server_main.run(transport="stdio")
+    main()

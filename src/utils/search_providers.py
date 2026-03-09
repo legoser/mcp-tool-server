@@ -231,7 +231,7 @@ async def search_with_fallback(query: str, num_results: int = 5) -> list[dict[st
         ddg_html,
         DuckDuckGoProvider(),
         BraveSearchProvider(
-            api_key=settings.brave_api_key if hasattr(settings, "brave_api_key") else None
+            api_key=settings.BRAVE_API_KEY if hasattr(settings, "BRAVE_API_KEY") else None
         ),
     ]
 

@@ -1,10 +1,12 @@
 from datetime import datetime, timedelta, timezone
 
 from ..core.logging import get_logger
+from ..mcp import mcp
 
 logger = get_logger(__name__)
 
 
+@mcp.tool()
 async def get_current_time() -> str:
     """Возвращает текущую дату и время по Москве (UTC+3)."""
     moscow_tz = timezone(timedelta(hours=3))  # TODO get user timezone
