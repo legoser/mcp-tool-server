@@ -24,7 +24,7 @@ FROM python:3-alpine
 
 WORKDIR /app
 
-# Install only runtime dependencies (curl for health checks)
+# Install runtime dependencies (curl for health checks)
 RUN apk add --no-cache curl
 
 # Copy virtual environment from builder
@@ -49,9 +49,12 @@ USER mcp
 # Expose port for SSE server
 EXPOSE 3344
 
-# Health check
+# Health check: use the MCP protocol to list tools (validates server is running)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:3344/health || exit 1
+    CMD curl -f http://localhost:3344/mcp \
+      -H "Content-Type: application/json" \
+      -H "Accept: application/json, text/event-stream" \
+      -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' || exit 1
 
-# Default command: Run SSE server
-CMD ["uvicorn", "src.main_sse:app", "--host", "0.0.0.0", "--port", "3344"]
+# Default command: Run MCP server via python -m src (supports both stdio and HTTP)
+CMD ["python", "-m", "src"]
