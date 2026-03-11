@@ -14,6 +14,7 @@
 ## Running Tests
 
 **Unit tests** (tests tools directly without starting server):
+
 ```bash
 pytest tests/test_tools_unit.py -v
 ```
@@ -60,7 +61,6 @@ src/
 │   ├── http_tools.py
 │   ├── web_tools.py
 │   ├── weather_tools.py
-│   └── ollama_tools.py
 └── utils/            # Helper functions
     ├── http_client.py
     ├── rate_limiter.py
@@ -78,9 +78,6 @@ src/
 | `get_random_fact` | Случайный факт |
 | `web_search` | Поиск в интернете (DuckDuckGo HTML) |
 | `web_fetch` | Загрузка веб-страниц |
-| `generate_text` | Генерация текста (Ollama) |
-| `chat_with_ai` | Чат с AI (Ollama) |
-| `list_ollama_models` | Список моделей Ollama |
 
 ## Available Prompts
 
