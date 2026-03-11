@@ -33,9 +33,8 @@ jobs:
 
   build:
     needs: test
-    runs-on: docker
-    container:
-      image: mcp-tools-server-build:latest
+    runs-on: host
+    
     if: forge.ref == 'refs/heads/main'
     steps:
       - name: Checkout code
