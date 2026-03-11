@@ -12,15 +12,15 @@ jobs:
   test:
     runs-on: docker
     container:
-      image: python:3.13-slim
+      image: mcp-tools-server-build:latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Install dependencies
         run: |
-          apt-get update && apt-get install -y --no-install-recommends curl
-          pip install -e ".[dev]"
+          set -eu
+          git init --quiet --initial-branch main
+          git remote add origin "$FORGE_REPO_URL"
+          git fetch --quiet --no-tags --depth=1 origin "$FORGE_SHA"
+          git checkout --quiet "$FORGE_SHA"
 
       - name: Run linter
         run: ruff check src/
@@ -31,10 +31,17 @@ jobs:
   build:
     needs: test
     runs-on: docker
-    if: github.ref == 'refs/heads/main'
+    container:
+      image: mcp-tools-server-build:latest
+    if: forge.ref == 'refs/heads/main'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        run: |
+          set -eu
+          git init --quiet --initial-branch main
+          git remote add origin "$FORGE_REPO_URL"
+          git fetch --quiet --no-tags --depth=1 origin "$FORGE_SHA"
+          git checkout --quiet "$FORGE_SHA"
 
       - name: Build Docker image
         run: docker build -t mcp-tools-server:latest .
