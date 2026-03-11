@@ -10,9 +10,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
-COPY ../pyproject.toml ./
-RUN pip install --no-cache-dir -e ".[dev]"
-
 RUN useradd -m runner && usermod -aG docker runner
 
 USER runner

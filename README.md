@@ -147,3 +147,16 @@ LOG_FORMAT=json LOG_LEVEL=DEBUG TRANSPORT=http python -m src
 - Names: `snake_case`
 - Errors: Informative exceptions or text description
 - Dependencies: Add to `pyproject.toml`
+
+## Build
+
+Что нужно сделать на runner
+
+ ```shell
+# 1. Собрать build-image один раз
+cd /path/to/mcp-tools-server
+docker build -t mcp-tools-server-build:latest ./build-image/
+# 2. Запушить в локальный registry (опционально)
+# docker tag mcp-tools-server-build:latest registry.local:5000/mcp-build:latest
+# docker push registry.local:5000/mcp-build:latest
+ ```
