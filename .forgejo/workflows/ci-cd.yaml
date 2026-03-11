@@ -15,7 +15,7 @@ jobs:
       image: python:3.13-slim
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Install dependencies
         run: |
