@@ -6,6 +6,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
     docker.io \
+    nodejs \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
