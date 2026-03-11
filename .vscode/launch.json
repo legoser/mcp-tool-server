@@ -2,28 +2,11 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Test Client (Interactive)",
-      "type": "python",
-      "request": "launch",
-      "program": "${workspaceFolder}/test_client.py",
-      "console": "integratedTerminal",
-      "justMyCode": false
-    },
-    {
-      "name": "Test Client (Automated)",
-      "type": "python",
-      "request": "launch",
-      "program": "${workspaceFolder}/test_client.py",
-      "args": ["--auto"],
-      "console": "integratedTerminal",
-      "justMyCode": false
-    },
-    {
       "name": "Run MCP Server",
       "type": "python",
       "request": "launch",
       "module": "uvicorn",
-      "args": ["src.main_sse:app", "--port", "3344", "--reload"],
+      "args": ["src"],
       "console": "integratedTerminal",
       "justMyCode": false
     }
