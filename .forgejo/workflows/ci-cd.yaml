@@ -19,15 +19,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        # run: |
-        #   set -eu
-        #   git init --quiet --initial-branch main
-        #   git remote add origin "$FORGE_REPO_URL"
-        #   git fetch --quiet --no-tags --depth=1 origin "$FORGE_SHA"
-        #   git checkout --quiet "$FORGE_SHA"
         with:
-          # Иногда помогает явное указание, что не нужно использовать токен в URL
           persist-credentials: false
+      
+      - name: Install dependencies
+        run: pip install .
 
       - name: Run linter
         run: ruff check src/
