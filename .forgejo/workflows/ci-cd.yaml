@@ -11,16 +11,23 @@ on:
 jobs:
   test:
     runs-on: docker
+    defaults:
+      run:
+        shell: bash
     container:
       image: mcp-tools-server-build:latest
     steps:
       - name: Checkout code
-        run: |
-          set -eu
-          git init --quiet --initial-branch main
-          git remote add origin "$FORGE_REPO_URL"
-          git fetch --quiet --no-tags --depth=1 origin "$FORGE_SHA"
-          git checkout --quiet "$FORGE_SHA"
+        uses: actions/checkout@v4
+        # run: |
+        #   set -eu
+        #   git init --quiet --initial-branch main
+        #   git remote add origin "$FORGE_REPO_URL"
+        #   git fetch --quiet --no-tags --depth=1 origin "$FORGE_SHA"
+        #   git checkout --quiet "$FORGE_SHA"
+        with:
+          # Иногда помогает явное указание, что не нужно использовать токен в URL
+          persist-credentials: false
 
       - name: Run linter
         run: ruff check src/
@@ -36,12 +43,9 @@ jobs:
     if: forge.ref == 'refs/heads/main'
     steps:
       - name: Checkout code
-        run: |
-          set -eu
-          git init --quiet --initial-branch main
-          git remote add origin "$FORGE_REPO_URL"
-          git fetch --quiet --no-tags --depth=1 origin "$FORGE_SHA"
-          git checkout --quiet "$FORGE_SHA"
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Build Docker image
         run: docker build -t mcp-tools-server:latest .
